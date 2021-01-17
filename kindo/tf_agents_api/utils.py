@@ -1,8 +1,10 @@
 import typing
+
+from tf_agents.environments.tf_py_environment import TFPyEnvironment
+from tf_agents.policies import tf_policy
 from tf_agents.replay_buffers.replay_buffer import ReplayBuffer
 from tf_agents.trajectories import trajectory
-from tf_agents.policies import tf_policy
-from tf_agents.environments.tf_py_environment import TFPyEnvironment
+
 
 """
 It was made a decision not to use drivers and metrics provided by tf_agents as it looks
@@ -11,7 +13,7 @@ inconvenient to use them. They also dont fit to kindo common format.
 
 
 def step(
-        environment: TFPyEnvironment, policy: tf_policy.Base, replay_buffer: ReplayBuffer
+    environment: TFPyEnvironment, policy: tf_policy.Base, replay_buffer: ReplayBuffer
 ) -> typing.Tuple[float, bool]:
     time_step = environment.current_time_step()
     action_step = policy.action(time_step)
@@ -22,9 +24,7 @@ def step(
 
 
 def step_episode(
-        environment: TFPyEnvironment,
-        policy: tf_policy.Base,
-        replay_buffer: ReplayBuffer,
+    environment: TFPyEnvironment, policy: tf_policy.Base, replay_buffer: ReplayBuffer
 ) -> typing.Tuple[int, int]:
     done = False
     environment.reset()

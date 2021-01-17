@@ -1,19 +1,20 @@
+import json
 import time
 from typing import Optional, Union
-import json
+
 from gym import Env
-from tf_agents.agents.tf_agent import TFAgent
 from stable_baselines.common.base_class import BaseRLModel
-from tf_agents.environments.tf_py_environment import TFPyEnvironment
 from stable_baselines.common.callbacks import BaseCallback, EventCallback
 from stable_baselines.common.vec_env import DummyVecEnv
+from tf_agents.agents.tf_agent import TFAgent
+from tf_agents.environments.tf_py_environment import TFPyEnvironment
 
 
 class BaseKindoRLCallback(BaseCallback):
     def init_callback(
-            self,
-            model: Union[BaseRLModel, TFAgent],
-            train_env: Optional[Union[Env, TFPyEnvironment]] = None
+        self,
+        model: Union[BaseRLModel, TFAgent],
+        train_env: Optional[Union[Env, TFPyEnvironment]] = None,
     ) -> None:
         if isinstance(model, BaseRLModel):
             super().init_callback(model)
@@ -51,12 +52,12 @@ class HistorySavingCallback(BaseKindoRLCallback, EventCallback):
     """
 
     def __init__(
-            self,
-            total_timesteps: int,
-            history_save_dir: str,
-            stop_callback=None,
-            maximum_episode_reward: int = None,
-            verbose=0
+        self,
+        total_timesteps: int,
+        history_save_dir: str,
+        stop_callback=None,
+        maximum_episode_reward: int = None,
+        verbose=0,
     ):
         """
         :param total_timesteps: Number of total timesteps to tran a model
@@ -115,7 +116,7 @@ class HistorySavingCallback(BaseKindoRLCallback, EventCallback):
             "mean_100_episodes_reward": self.mean_100_episodes_reward,
             "mean_100_episodes_regret": self.mean_100_episodes_regret,
             "time_spent_on_training": self.time_spent_on_training,
-            "number_of_episodes": self.number_of_episodes_spent
+            "number_of_episodes": self.number_of_episodes_spent,
         }
 
     def save_history(self):
@@ -171,10 +172,10 @@ class HistorySavingCallback(BaseKindoRLCallback, EventCallback):
 
 class StopTrainingWhenMean100EpReward(BaseCallback):
     def __init__(
-            self,
-            reward_threshold: float,
-            timestep_activation_threshold: int = 5000,
-            verbose: int = 1
+        self,
+        reward_threshold: float,
+        timestep_activation_threshold: int = 5000,
+        verbose: int = 1,
     ):
         """
         :param timestep_activation_threshold: A number of timesteps

@@ -1,9 +1,9 @@
-from tf_agents.policies import tf_policy
 from tf_agents.environments.tf_py_environment import TFPyEnvironment
+from tf_agents.policies import tf_policy
 
 
 def compute_mean_reward(
-        environment: TFPyEnvironment, policy: tf_policy.Base, num_episodes=10
+    environment: TFPyEnvironment, policy: tf_policy.Base, num_episodes=10
 ) -> float:
     """
     Evaluate mean reward over `num_episodes`

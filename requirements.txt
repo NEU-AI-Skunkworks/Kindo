@@ -1,0 +1,7 @@
+matplotlib==3.3.0
+gym==0.15.7
+tensorflow==1.15.0
+tensorflow-estimator==1.15.1
+tensorflow-probability==0.8.0
+tf-agents==0.3.0
+stable-baselines==2.10.1

@@ -1,6 +1,8 @@
 import json
 from typing import List
+
 import matplotlib.pyplot as plt
+
 from kindo import get_trained_model_paths
 from kindo.utils import chunks
 
@@ -26,15 +28,15 @@ class HistoryManager:
 
     @staticmethod
     def _plot_history_bars(
-            title: str,
-            values: List,
-            y_label: str,
-            x_label: str,
-            x_ticks: List[str],
-            rotate_x_ticks: bool,
-            title_font_size: int,
-            fig=None,
-            ax=None,
+        title: str,
+        values: List,
+        y_label: str,
+        x_label: str,
+        x_ticks: List[str],
+        rotate_x_ticks: bool,
+        title_font_size: int,
+        fig=None,
+        ax=None,
     ):
         if fig is None or ax is None:
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -48,7 +50,9 @@ class HistoryManager:
         rotation = 45 if rotate_x_ticks else 0
         ax.set_xticklabels(x_ticks, fontsize=8, rotation=rotation)
 
-    def plot_mean_rewards(self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False):
+    def plot_mean_rewards(
+        self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False
+    ):
         self._plot_history_bars(
             title=f"Mean 100 rewards over last 100 episodes for {self.env_name}",
             values=self.get_history_overall_stats("mean_100_episodes_reward"),
@@ -58,10 +62,12 @@ class HistoryManager:
             fig=fig,
             ax=ax,
             title_font_size=title_font_size,
-            rotate_x_ticks=rotate_x_ticks
+            rotate_x_ticks=rotate_x_ticks,
         )
 
-    def plot_mean_regrets(self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False):
+    def plot_mean_regrets(
+        self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False
+    ):
         mean_regrets = self.get_history_overall_stats("mean_100_episodes_regret")
         if len(mean_regrets) == 0:
             print(
@@ -80,11 +86,11 @@ class HistoryManager:
             fig=fig,
             ax=ax,
             title_font_size=title_font_size,
-            rotate_x_ticks=rotate_x_ticks
+            rotate_x_ticks=rotate_x_ticks,
         )
 
     def plot_time_spent_on_training(
-            self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False
+        self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False
     ):
         self._plot_history_bars(
             title=f"Time models spent on training {self.env_name}",
@@ -109,19 +115,23 @@ class HistoryManager:
 
         mean_rewards = []
         for ep_rew in episode_rewards:
-            mean_rewards.append([sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)])
+            mean_rewards.append(
+                [sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)]
+            )
 
         maximum_number_of_episode_means = max(len(ep_rews) for ep_rews in mean_rewards)
         maximum_number_of_episodes = max(len(ep_rews) for ep_rews in episode_rewards)
 
-        timesteps = list(range(
-            0,
-            max(len(ep_rews) for ep_rews in episode_rewards),
-            int(maximum_number_of_episodes / maximum_number_of_episode_means)
-        ))
+        timesteps = list(
+            range(
+                0,
+                max(len(ep_rews) for ep_rews in episode_rewards),
+                int(maximum_number_of_episodes / maximum_number_of_episode_means),
+            )
+        )
 
         for i, ep_rew in enumerate(mean_rewards):
-            ax.plot(timesteps[:len(ep_rew)], ep_rew, label=self.model_names[i])
+            ax.plot(timesteps[: len(ep_rew)], ep_rew, label=self.model_names[i])
 
         ax.set_title("Rewards per episode", fontsize=14)
         ax.set_xlabel("Episodes", fontsize=10)
@@ -147,19 +157,23 @@ class HistoryManager:
 
         mean_regrets = []
         for ep_rew in episode_regrets:
-            mean_regrets.append([sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)])
+            mean_regrets.append(
+                [sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)]
+            )
 
         maximum_number_of_episode_means = max(len(ep_rews) for ep_rews in mean_regrets)
         maximum_number_of_episodes = max(len(ep_rews) for ep_rews in episode_regrets)
 
-        timesteps = list(range(
-            0,
-            max(len(ep_rews) for ep_rews in episode_regrets),
-            int(maximum_number_of_episodes / maximum_number_of_episode_means)
-        ))
+        timesteps = list(
+            range(
+                0,
+                max(len(ep_rews) for ep_rews in episode_regrets),
+                int(maximum_number_of_episodes / maximum_number_of_episode_means),
+            )
+        )
 
         for i, ep_rew in enumerate(mean_regrets):
-            ax.plot(timesteps[:len(ep_rew)], ep_rew, label=self.model_names[i])
+            ax.plot(timesteps[: len(ep_rew)], ep_rew, label=self.model_names[i])
 
         ax.set_title("Regrets per episode", fontsize=14)
         ax.set_xlabel("Episodes", fontsize=10)

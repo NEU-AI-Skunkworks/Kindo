@@ -1,22 +1,20 @@
 import typing
 from pathlib import Path
+
 import gym
-from tf_agents.agents.tf_agent import TFAgent
-
-from tf_agents.agents.dqn.dqn_agent import DqnAgent, DdqnAgent
 from tf_agents.agents.ddpg.ddpg_agent import DdpgAgent
-from tf_agents.agents.td3.td3_agent import Td3Agent
-from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
+from tf_agents.agents.dqn.dqn_agent import DdqnAgent, DqnAgent
 from tf_agents.agents.ppo.ppo_agent import PPOAgent
+from tf_agents.agents.reinforce.reinforce_agent import ReinforceAgent
 from tf_agents.agents.sac.sac_agent import SacAgent
-
+from tf_agents.agents.td3.td3_agent import Td3Agent
+from tf_agents.agents.tf_agent import TFAgent
 from tf_agents.environments.tf_py_environment import TFPyEnvironment
-from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.policies.policy_saver import PolicySaver
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
 
 import kindo
-from kindo import callbacks
-from kindo import environment_converter
+from kindo import callbacks, environment_converter
 from kindo.tf_agents_api import utils
 
 
@@ -25,22 +23,18 @@ class WrongModelError(Exception):
 
 
 def train_off_policy_tf_agent(
-        model: TFAgent,
-        train_env: TFPyEnvironment,
-        total_timesteps: int,
-        callback: callbacks.BaseKindoRLCallback = None,
+    model: TFAgent,
+    train_env: TFPyEnvironment,
+    total_timesteps: int,
+    callback: callbacks.BaseKindoRLCallback = None,
 ):
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-        model.collect_data_spec,
-        batch_size=train_env.batch_size,
-        max_length=100000
+        model.collect_data_spec, batch_size=train_env.batch_size, max_length=100000
     )
     collect_policy = model.collect_policy
 
     dataset = replay_buffer.as_dataset(
-        num_parallel_calls=3,
-        sample_batch_size=64,
-        num_steps=2
+        num_parallel_calls=3, sample_batch_size=64, num_steps=2
     ).prefetch(3)
     iterator = iter(dataset)
 
@@ -53,9 +47,7 @@ def train_off_policy_tf_agent(
     curr_episode_losses, curr_episode_rewards, curr_episode_length = [], [], 0
 
     utils.step(
-        environment=train_env,
-        policy=collect_policy,
-        replay_buffer=replay_buffer
+        environment=train_env, policy=collect_policy, replay_buffer=replay_buffer
     )
 
     if callback is not None:
@@ -63,9 +55,7 @@ def train_off_policy_tf_agent(
 
     for _ in range(total_timesteps):
         reward, done = utils.step(
-            environment=train_env,
-            policy=collect_policy,
-            replay_buffer=replay_buffer,
+            environment=train_env, policy=collect_policy, replay_buffer=replay_buffer
         )
         experience, unused_info = next(iterator)
         train_loss = model.train(experience).loss.numpy()
@@ -95,15 +85,13 @@ def train_off_policy_tf_agent(
 
 
 def train_on_policy_tf_agent(
-        model: TFAgent,
-        train_env: TFPyEnvironment,
-        total_timesteps: int,
-        callback: callbacks.BaseKindoRLCallback = None
+    model: TFAgent,
+    train_env: TFPyEnvironment,
+    total_timesteps: int,
+    callback: callbacks.BaseKindoRLCallback = None,
 ):
     replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-        model.collect_data_spec,
-        batch_size=train_env.batch_size,
-        max_length=100000
+        model.collect_data_spec, batch_size=train_env.batch_size, max_length=100000
     )
 
     if callback is not None:
@@ -140,31 +128,35 @@ def train_on_policy_tf_agent(
 
 
 def train_tf_agent(
-        model: TFAgent,
-        env: gym.Env,
-        total_timesteps: int,
-        model_name: typing.Optional[str] = None,
-        maximum_episode_reward: int = 200,
-        stop_training_threshold: int = 195,
+    model: TFAgent,
+    env: gym.Env,
+    total_timesteps: int,
+    model_name: typing.Optional[str] = None,
+    maximum_episode_reward: int = 200,
+    stop_training_threshold: int = 195,
 ):
     train_env = environment_converter.gym_to_tf(env)
     environment_name = env.__class__.__name__
     model_dir = f"{kindo.globals.save_path}/{environment_name}/{model_name}"
     Path(model_dir).mkdir(parents=True, exist_ok=True)
     stop_training_callback = callbacks.StopTrainingWhenMean100EpReward(
-        reward_threshold=stop_training_threshold,
+        reward_threshold=stop_training_threshold
     )
     history_saving_callback = callbacks.HistorySavingCallback(
         total_timesteps=total_timesteps,
         history_save_dir=model_dir,
         maximum_episode_reward=maximum_episode_reward,
-        stop_callback=stop_training_callback
+        stop_callback=stop_training_callback,
     )
 
     if model.__class__ in [DqnAgent, DdqnAgent, DdpgAgent, SacAgent]:
-        train_off_policy_tf_agent(model, train_env, total_timesteps, history_saving_callback)
+        train_off_policy_tf_agent(
+            model, train_env, total_timesteps, history_saving_callback
+        )
     elif model.__class__ in [PPOAgent, ReinforceAgent, Td3Agent]:
-        train_on_policy_tf_agent(model, train_env, total_timesteps, history_saving_callback)
+        train_on_policy_tf_agent(
+            model, train_env, total_timesteps, history_saving_callback
+        )
     else:
         raise WrongModelError(
             f"Model of class `{model.__class__.__name__}` is not supported by Kindo API"
