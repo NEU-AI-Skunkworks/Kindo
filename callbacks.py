@@ -1,10 +1,48 @@
 import time
+from typing import Optional, Union
 import json
+from gym import Env
+from tf_agents.agents.tf_agent import TFAgent
+from stable_baselines.common.base_class import BaseRLModel
+from tf_agents.environments.tf_py_environment import TFPyEnvironment
 from stable_baselines.common.callbacks import BaseCallback, EventCallback
 from stable_baselines.common.vec_env import DummyVecEnv
 
 
-class HistorySavingCallback(EventCallback):
+class BaseKindoRLCallback(BaseCallback):
+    def init_callback(
+            self,
+            model: Union[BaseRLModel, TFAgent],
+            train_env: Optional[Union[Env, TFPyEnvironment]] = None
+    ) -> None:
+        if isinstance(model, BaseRLModel):
+            super().init_callback(model)
+            self.training_framework = "baselines"
+        elif isinstance(model, TFAgent):
+            self.training_env = train_env
+            self.training_framework = "tf_agents"
+        else:
+            raise ValueError(
+                f"{self.__class__.__name__} does not support "
+                f"model of type `{model.__class__.__name__}`"
+            )
+
+    def on_step(self) -> bool:
+        if isinstance(self.model, BaseRLModel):
+            return super().on_step()
+        else:
+            self.n_calls += 1
+            self.num_timesteps = self.n_calls
+
+            return self._on_step()
+
+    def on_steps(self, num_steps) -> bool:
+        self.n_calls += num_steps
+        self.num_timesteps = self.n_calls
+        return self._on_step()
+
+
+class HistorySavingCallback(BaseKindoRLCallback, EventCallback):
     """
     A callback enabling to save training history such as epsilon and reward per
     each episode. After model is trained, the callback will save historical data
@@ -34,7 +72,7 @@ class HistorySavingCallback(EventCallback):
         self.mean_100_episodes_reward = 0
         self.mean_100_episodes_regret = None
         self.time_spent_on_training = None
-        # Made for models like PPO (trained with VecEnv)
+        # For models trained with VecEnv
         self._curr_ep_rewards = None
         self._episode_rewards = None
         self.need_to_calculate_rewards = False  # True when model is trained with VecEnv
@@ -90,10 +128,11 @@ class HistorySavingCallback(EventCallback):
         self.save_history()
 
     def _on_training_start(self):
-        if isinstance(self.model.env, DummyVecEnv):
-            self.need_to_calculate_rewards = True
-            self._curr_ep_rewards = []
-            self._episode_rewards = []
+        if self.training_framework == "baselines":
+            if isinstance(self.model.env, DummyVecEnv):
+                self.need_to_calculate_rewards = True
+                self._curr_ep_rewards = []
+                self._episode_rewards = []
 
     def _on_step(self) -> bool:
         continue_training = self._on_event()
@@ -102,21 +141,24 @@ class HistorySavingCallback(EventCallback):
 
         is_last_timestep = curr_step == self.total_timesteps
 
-        if self.need_to_calculate_rewards:
-            self._curr_ep_rewards.append(self.locals["rewards"][0])
+        if self.training_framework == "baselines":
+            if self.need_to_calculate_rewards:
+                self._curr_ep_rewards.append(self.locals["rewards"][0])
 
-            if self.model.env.buf_dones[0]:
-                self._episode_rewards.append(sum(self._curr_ep_rewards))
-                self._curr_ep_rewards = []
+                if self.model.env.buf_dones[0]:
+                    self._episode_rewards.append(sum(self._curr_ep_rewards))
+                    self._curr_ep_rewards = []
 
-            if curr_step < 9000:
-                # A weird behaviour of the framework here:
-                # when it is a VecEnv it stops earlier than it has to stop.
-                # It stops earlier from 96% of total timesteps to 99.4%.
-                # Numbers were calculated empirically.
-                is_last_timestep = curr_step > 0.96 * self.total_timesteps
-            else:
-                is_last_timestep = curr_step > 0.994 * self.total_timesteps
+                if curr_step < 9000:
+                    # A weird behaviour of the framework here:
+                    # when it is a VecEnv it stops earlier than it has to stop.
+                    # It stops earlier from 96% of total timesteps to 99.85%.
+                    # Numbers were calculated empirically.
+                    is_last_timestep = curr_step > 0.96 * self.total_timesteps
+                elif 9000 < curr_step < 200000:
+                    is_last_timestep = curr_step > 0.994 * self.total_timesteps
+                else:
+                    is_last_timestep = curr_step > 0.9985 * self.total_timesteps
 
         if self._start_time is None:
             self._start_time = time.time()
