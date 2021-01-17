@@ -50,7 +50,7 @@ if __name__ == "__main__":
     ]
     train_a_couple_of_models(
         models=models,
-        total_timesteps=20000,
+        total_timesteps=4000,
         model_names=model_names,
         maximum_episode_reward=200,
         stop_training_threshold=35
