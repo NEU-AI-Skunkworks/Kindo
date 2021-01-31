@@ -13,7 +13,7 @@ inconvenient to use them. They also dont fit to kindo common format.
 
 
 def step(
-    environment: TFPyEnvironment, policy: tf_policy.Base, replay_buffer: ReplayBuffer
+    environment: TFPyEnvironment, policy: tf_policy.TFPolicy, replay_buffer: ReplayBuffer
 ) -> typing.Tuple[float, bool]:
     time_step = environment.current_time_step()
     action_step = policy.action(time_step)
@@ -24,7 +24,7 @@ def step(
 
 
 def step_episode(
-    environment: TFPyEnvironment, policy: tf_policy.Base, replay_buffer: ReplayBuffer
+    environment: TFPyEnvironment, policy: tf_policy.TFPolicy, replay_buffer: ReplayBuffer
 ) -> typing.Tuple[int, int]:
     done = False
     environment.reset()

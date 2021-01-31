@@ -3,9 +3,9 @@ import time
 from typing import Optional, Union
 
 from gym import Env
-from stable_baselines.common.base_class import BaseRLModel
-from stable_baselines.common.callbacks import BaseCallback, EventCallback
-from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines3.common.base_class import BaseAlgorithm
+from stable_baselines3.common.callbacks import BaseCallback, EventCallback
+from stable_baselines3.common.vec_env import DummyVecEnv
 from tf_agents.agents.tf_agent import TFAgent
 from tf_agents.environments.tf_py_environment import TFPyEnvironment
 
@@ -13,10 +13,10 @@ from tf_agents.environments.tf_py_environment import TFPyEnvironment
 class BaseKindoRLCallback(BaseCallback):
     def init_callback(
         self,
-        model: Union[BaseRLModel, TFAgent],
+        model: Union[BaseAlgorithm, TFAgent],
         train_env: Optional[Union[Env, TFPyEnvironment]] = None,
     ) -> None:
-        if isinstance(model, BaseRLModel):
+        if isinstance(model, BaseAlgorithm):
             super().init_callback(model)
             self.training_framework = "baselines"
         elif isinstance(model, TFAgent):
@@ -29,7 +29,7 @@ class BaseKindoRLCallback(BaseCallback):
             )
 
     def on_step(self) -> bool:
-        if isinstance(self.model, BaseRLModel):
+        if isinstance(self.model, BaseAlgorithm):
             return super().on_step()
         else:
             self.n_calls += 1
@@ -140,13 +140,20 @@ class HistorySavingCallback(BaseKindoRLCallback, EventCallback):
 
         curr_step = self.n_calls if hasattr(self, "n_calls") else self.num_timesteps
 
-        is_last_timestep = curr_step == self.total_timesteps
+        is_last_timestep = curr_step >= self.total_timesteps
 
         if self.training_framework == "baselines":
             if self.need_to_calculate_rewards:
-                self._curr_ep_rewards.append(self.locals["rewards"][0])
+                try:
+                    reward = self.locals["reward"][0]
+                    done = self.locals["done"][0]
+                except KeyError:
+                    reward = self.locals["rewards"][0]
+                    done = self.locals["dones"][0]
 
-                if self.model.env.buf_dones[0]:
+                self._curr_ep_rewards.append(reward)
+
+                if done:
                     self._episode_rewards.append(sum(self._curr_ep_rewards))
                     self._curr_ep_rewards = []
 
@@ -170,7 +177,7 @@ class HistorySavingCallback(BaseKindoRLCallback, EventCallback):
         return continue_training
 
 
-class StopTrainingWhenMean100EpReward(BaseCallback):
+class StopTrainingWhenMean100EpReward(BaseKindoRLCallback):
     def __init__(
         self,
         reward_threshold: float,

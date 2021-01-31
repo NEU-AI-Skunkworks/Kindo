@@ -3,7 +3,7 @@ from typing import List
 
 import matplotlib.pyplot as plt
 
-from kindo import get_trained_model_paths
+from kindo.paths import get_trained_model_paths
 from kindo.utils import chunks
 
 
@@ -21,10 +21,7 @@ class HistoryManager:
             self.model_histories[model_name] = model_history
 
     def get_history_overall_stats(self, stat_key):
-        return [
-            self.model_histories[model_name][stat_key]
-            for model_name in self.model_names
-        ]
+        return [self.model_histories[model_name][stat_key] for model_name in self.model_names]
 
     @staticmethod
     def _plot_history_bars(
@@ -50,9 +47,7 @@ class HistoryManager:
         rotation = 45 if rotate_x_ticks else 0
         ax.set_xticklabels(x_ticks, fontsize=8, rotation=rotation)
 
-    def plot_mean_rewards(
-        self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False
-    ):
+    def plot_mean_rewards(self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False):
         self._plot_history_bars(
             title=f"Mean 100 rewards over last 100 episodes for {self.env_name}",
             values=self.get_history_overall_stats("mean_100_episodes_reward"),
@@ -65,9 +60,7 @@ class HistoryManager:
             rotate_x_ticks=rotate_x_ticks,
         )
 
-    def plot_mean_regrets(
-        self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False
-    ):
+    def plot_mean_regrets(self, fig=None, ax=None, title_font_size=14, rotate_x_ticks=False):
         mean_regrets = self.get_history_overall_stats("mean_100_episodes_regret")
         if len(mean_regrets) == 0:
             print(
@@ -115,9 +108,7 @@ class HistoryManager:
 
         mean_rewards = []
         for ep_rew in episode_rewards:
-            mean_rewards.append(
-                [sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)]
-            )
+            mean_rewards.append([sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)])
 
         maximum_number_of_episode_means = max(len(ep_rews) for ep_rews in mean_rewards)
         maximum_number_of_episodes = max(len(ep_rews) for ep_rews in episode_rewards)
@@ -157,9 +148,7 @@ class HistoryManager:
 
         mean_regrets = []
         for ep_rew in episode_regrets:
-            mean_regrets.append(
-                [sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)]
-            )
+            mean_regrets.append([sum(chunk) / len(chunk) for chunk in chunks(ep_rew, mean_step)])
 
         maximum_number_of_episode_means = max(len(ep_rews) for ep_rews in mean_regrets)
         maximum_number_of_episodes = max(len(ep_rews) for ep_rews in episode_regrets)
