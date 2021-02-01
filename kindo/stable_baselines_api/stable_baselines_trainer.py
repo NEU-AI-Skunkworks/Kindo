@@ -1,5 +1,6 @@
 import logging
 import typing
+from abc import ABCMeta
 from pathlib import Path
 
 from gym import Env
@@ -11,8 +12,12 @@ from kindo.paths import abs_path, save_path
 logger = logging.getLogger(__name__)
 
 
+def initialize_stable_baselines_model(model_class: ABCMeta, train_env: Env) -> BaseAlgorithm:
+    return model_class(policy="MlpPolicy", env=train_env)
+
+
 def train_baselines_model(
-    model: BaseAlgorithm,
+    model: typing.Union[BaseAlgorithm, ABCMeta],
     env: Env,
     model_name: typing.Optional[str],
     total_timesteps: int = 100000,
@@ -33,6 +38,9 @@ def train_baselines_model(
         stop_callback=stop_callback,
         maximum_episode_reward=maximum_episode_reward,
     )
+
+    if isinstance(model, ABCMeta):
+        model = initialize_stable_baselines_model(model_class=model, train_env=env)
 
     model = model.learn(
         total_timesteps=total_timesteps,

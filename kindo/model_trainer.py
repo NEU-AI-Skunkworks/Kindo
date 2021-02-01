@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from typing import List, Optional, Union
 
 from gym import Env
@@ -11,7 +12,7 @@ from kindo.tf_agents_api.tf_agents_trainer import train_tf_agent
 
 
 def train(
-    model: Union[BaseAlgorithm, TFAgent],
+    model: Union[BaseAlgorithm, TFAgent, ABCMeta],
     env: Union[Env, TimeLimit],
     total_timesteps: int,
     stop_threshold: int,
@@ -20,7 +21,7 @@ def train(
 ):
     env = env.env if isinstance(env, TimeLimit) else env
     model_name = model_name or utils.compile_random_model_name(model)
-    if isinstance(model, BaseAlgorithm):
+    if isinstance(model, BaseAlgorithm) or issubclass(model, BaseAlgorithm):
         train_baselines_model(
             model=model,
             env=env,
@@ -29,7 +30,7 @@ def train(
             maximum_episode_reward=maximum_episode_reward,
             stop_training_threshold=stop_threshold,
         )
-    elif isinstance(model, TFAgent):
+    elif isinstance(model, TFAgent) or issubclass(model, TFAgent):
         train_tf_agent(
             model=model,
             env=env,
@@ -38,10 +39,12 @@ def train(
             maximum_episode_reward=maximum_episode_reward,
             stop_training_threshold=stop_threshold,
         )
+    else:
+        raise ValueError(f"Model of class `{model.__class__.__name__}` is not supported")
 
 
 def train_multiple(
-    models: List[Union[BaseAlgorithm, TFAgent]],
+    models: List[Union[BaseAlgorithm, TFAgent, ABCMeta]],
     env: Env,
     total_timesteps: int,
     stop_threshold: int,

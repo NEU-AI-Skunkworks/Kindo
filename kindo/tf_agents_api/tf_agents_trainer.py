@@ -1,11 +1,18 @@
 import typing
+from abc import ABCMeta
 from pathlib import Path
 
 import gym
+import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 from tf_agents import agents
+from tf_agents.agents.ddpg import critic_network
 from tf_agents.agents.dqn.dqn_agent import DdqnAgent
+from tf_agents.agents.dqn.examples.v2.train_eval import create_feedforward_network
+from tf_agents.agents.sac.tanh_normal_projection_network import TanhNormalProjectionNetwork
 from tf_agents.agents.tf_agent import TFAgent
 from tf_agents.environments.tf_py_environment import TFPyEnvironment
+from tf_agents.networks import actor_distribution_network, value_network
 from tf_agents.policies.policy_saver import PolicySaver
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 
@@ -122,8 +129,83 @@ def train_on_policy_tf_agent(
         callback.on_training_end()
 
 
+def initialize_tf_agent(model_class: ABCMeta, train_env: TFPyEnvironment) -> TFAgent:
+    optimizer = Adam(learning_rate=1e-3)
+
+    if model_class in [agents.PPOAgent]:
+        actor_net = actor_distribution_network.ActorDistributionNetwork(
+            train_env.observation_spec(),
+            train_env.action_spec(),
+            fc_layer_params=(200, 100),
+            activation_fn=tf.keras.activations.tanh,
+        )
+        value_net = value_network.ValueNetwork(
+            train_env.observation_spec(),
+            fc_layer_params=(200, 100),
+            activation_fn=tf.keras.activations.tanh,
+        )
+        model = model_class(
+            time_step_spec=train_env.time_step_spec(),
+            action_spec=train_env.action_spec(),
+            actor_net=actor_net,
+            value_net=value_net,
+            optimizer=optimizer,
+        )
+    elif model_class in [agents.DqnAgent]:
+        action_spec = train_env.action_spec()
+        num_actions = action_spec.maximum - action_spec.minimum + 1
+        q_network = create_feedforward_network(fc_layer_units=(100,), num_actions=num_actions)
+        model = model_class(
+            time_step_spec=train_env.time_step_spec(),
+            action_spec=train_env.action_spec(),
+            q_network=q_network,
+            optimizer=optimizer,
+        )
+    elif model_class in [agents.ReinforceAgent]:
+        optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-3)
+        actor_net = actor_distribution_network.ActorDistributionNetwork(
+            train_env.time_step_spec().observation, train_env.action_spec(), fc_layer_params=(100,)
+        )
+        model = model_class(
+            time_step_spec=train_env.time_step_spec(),
+            action_spec=train_env.action_spec(),
+            actor_network=actor_net,
+            optimizer=optimizer,
+        )
+    elif model_class in [agents.SacAgent]:
+        time_step_spec = train_env.time_step_spec()
+        observation_spec = time_step_spec.observation
+        action_spec = train_env.action_spec()
+        critic_joint_fc_layers = (256, 256)
+        actor_net = actor_distribution_network.ActorDistributionNetwork(
+            observation_spec,
+            action_spec,
+            fc_layer_params=(256, 256),
+            continuous_projection_net=TanhNormalProjectionNetwork,
+        )
+        critic_net = critic_network.CriticNetwork(
+            (observation_spec, action_spec),
+            joint_fc_layer_params=critic_joint_fc_layers,
+            kernel_initializer="glorot_uniform",
+            last_kernel_initializer="glorot_uniform",
+        )
+        model = agents.SacAgent(
+            time_step_spec,
+            action_spec,
+            actor_network=actor_net,
+            critic_network=critic_net,
+            actor_optimizer=tf.compat.v1.train.AdamOptimizer(3e-4),
+            critic_optimizer=tf.compat.v1.train.AdamOptimizer(3e-4),
+            alpha_optimizer=tf.compat.v1.train.AdamOptimizer(3e-4),
+        )
+    else:
+        raise ValueError(f"Class of class `{model_class.__name__}` is not supported")
+    model.initialize()
+    return model
+
+
 def train_tf_agent(
-    model: TFAgent,
+    model: typing.Union[TFAgent, ABCMeta],
     env: gym.Env,
     total_timesteps: int,
     model_name: typing.Optional[str] = None,
@@ -134,6 +216,7 @@ def train_tf_agent(
     environment_name = env.__class__.__name__
     model_dir = f"{kindo.paths.save_path}/{environment_name}/{model_name}"
     Path(model_dir).mkdir(parents=True, exist_ok=True)
+
     stop_training_callback = callbacks.StopTrainingWhenMean100EpReward(
         reward_threshold=stop_training_threshold
     )
@@ -143,6 +226,9 @@ def train_tf_agent(
         maximum_episode_reward=maximum_episode_reward,
         stop_callback=stop_training_callback,
     )
+
+    if isinstance(model, ABCMeta):
+        model = initialize_tf_agent(model_class=model, train_env=train_env)
 
     if model.__class__ in [
         agents.DqnAgent,
