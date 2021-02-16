@@ -1,7 +1,7 @@
 import logging
-import typing
 from abc import ABCMeta
 from pathlib import Path
+from typing import Optional, Type, Union
 
 from gym import Env
 from stable_baselines3.common.base_class import BaseAlgorithm
@@ -17,9 +17,9 @@ def initialize_stable_baselines_model(model_class: ABCMeta, train_env: Env) -> B
 
 
 def train_baselines_model(
-    model: typing.Union[BaseAlgorithm, ABCMeta],
+    model: Union[BaseAlgorithm, Type[BaseAlgorithm]],
     env: Env,
-    model_name: typing.Optional[str],
+    model_name: Optional[str],
     total_timesteps: int = 100000,
     log_interval: int = 10,
     maximum_episode_reward=None,

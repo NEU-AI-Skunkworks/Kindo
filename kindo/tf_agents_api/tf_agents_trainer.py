@@ -205,7 +205,7 @@ def initialize_tf_agent(model_class: ABCMeta, train_env: TFPyEnvironment) -> TFA
 
 
 def train_tf_agent(
-    model: typing.Union[TFAgent, ABCMeta],
+    model: typing.Union[TFAgent, typing.Type[TFAgent]],
     env: gym.Env,
     total_timesteps: int,
     model_name: typing.Optional[str] = None,

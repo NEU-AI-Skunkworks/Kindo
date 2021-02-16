@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from typing import List, Optional, Union
+from typing import List, Optional, Type, Union
 
 from gym import Env
 from gym.wrappers import TimeLimit
@@ -12,33 +12,33 @@ from kindo.tf_agents_api.tf_agents_trainer import train_tf_agent
 
 
 def train(
-    model: Union[BaseAlgorithm, TFAgent, ABCMeta],
+    model: Union[BaseAlgorithm, TFAgent, Type[BaseAlgorithm], Type[TFAgent]],
     env: Union[Env, TimeLimit],
     total_timesteps: int,
     stop_threshold: int,
-    model_name: str = None,
-    maximum_episode_reward: int = None,
+    model_name: Optional[str] = None,
+    maximum_episode_reward: Optional[int] = None,
 ):
     env = env.env if isinstance(env, TimeLimit) else env
     model_name = model_name or utils.compile_random_model_name(model)
-    if isinstance(model, BaseAlgorithm) or issubclass(model, BaseAlgorithm):
-        train_baselines_model(
-            model=model,
-            env=env,
-            total_timesteps=total_timesteps,
-            model_name=model_name,
-            maximum_episode_reward=maximum_episode_reward,
-            stop_training_threshold=stop_threshold,
-        )
-    elif isinstance(model, TFAgent) or issubclass(model, TFAgent):
-        train_tf_agent(
-            model=model,
-            env=env,
-            total_timesteps=total_timesteps,
-            model_name=model_name,
-            maximum_episode_reward=maximum_episode_reward,
-            stop_training_threshold=stop_threshold,
-        )
+    train_kwargs = {
+        "model": model,
+        "env": env,
+        "total_timesteps": total_timesteps,
+        "model_name": model_name,
+        "maximum_episode_reward": maximum_episode_reward,
+        "stop_training_threshold": stop_threshold,
+    }
+    # Check instances:
+    if isinstance(model, BaseAlgorithm):
+        train_baselines_model(**train_kwargs)
+    elif isinstance(model, TFAgent):
+        train_tf_agent(**train_kwargs)
+    # Check classes:
+    elif issubclass(model, BaseAlgorithm):
+        train_baselines_model(**train_kwargs)
+    elif issubclass(model, TFAgent):
+        train_tf_agent(**train_kwargs)
     else:
         raise ValueError(f"Model of class `{model.__class__.__name__}` is not supported")
 
