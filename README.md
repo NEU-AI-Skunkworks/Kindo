@@ -21,7 +21,7 @@ Kindo enables to train models using both Tensorflow 2.X and PyTorch deep learnin
 Kindo requires python 3.8+
 
 ### Install using pip
-`pip install https://github.com/NEU-AI-Skunkworks/kindo`
+`pip install git+https://github.com/NEU-AI-Skunkworks/kindo.git@master`
 
 ## Important Information
 
